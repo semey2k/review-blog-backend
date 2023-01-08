@@ -108,16 +108,22 @@ export const getOne = async (req, res) => {
 
 export const getPostsByTags = async (req, res) => {
   try {
+    const postsPerPage = 10;
+    const skip = req.query.skip;
+
+    const total = await PostModel.countDocuments({});
     const tagsId = req.params.tagsId;
 
     const posts = await PostModel.find({
       tags: { $in: [tagsId] },
     })
       .sort({ createdAt: -1 })
+      .skip((skip - 1) * postsPerPage)
+      .limit(postsPerPage)
       .populate({ path: 'user', populate: { path: 'post', model: 'Post', select: ['likes'] } })
       .exec();
 
-    res.json(posts);
+      res.json({ posts, total: Math.ceil(total / postsPerPage) });
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -144,7 +150,7 @@ export const getAllByCategory = async (req, res) => {
       return res.json({ posts, total: Math.ceil(total / postsPerPage) });
     } else if (cat === 'Popular') {
       const posts = await PostModel.find()
-        .sort({userRating : -1})
+        .sort({ userRating: -1 })
         .skip((skip - 1) * postsPerPage)
         .limit(postsPerPage)
         .populate({ path: 'user', populate: { path: 'post', model: 'Post', select: ['likes'] } })
@@ -235,8 +241,6 @@ export const createPost = async (req, res) => {
       createdAt: new Date().toLocaleString(),
     });
     const post = await doc.save();
-
-
 
     await UserModel.updateOne({ _id: req.userId }, { $push: { post: post._id } });
 
@@ -340,12 +344,18 @@ export const showComments = async (req, res) => {
 
 export const searchPost = async (req, res) => {
   try {
+    const total = await PostModel.countDocuments({});
+    const postsPerPage = 10;
+    const skip = req.query.skip;
     const query = req.params.query;
-    const post = await PostModel.find({ $text: { $search: query } })
+    const posts = await PostModel.find({ $text: { $search: query } })
+      .sort({ createdAt: -1 })
+      .skip((skip - 1) * postsPerPage)
+      .limit(postsPerPage)
       .populate({ path: 'user', populate: { path: 'post', model: 'Post', select: ['likes'] } })
       .exec();
 
-    res.json(post);
+    res.json({ posts, total: Math.ceil(total / postsPerPage) });
   } catch (e) {
     console.log(e);
     res.status(500).json({
