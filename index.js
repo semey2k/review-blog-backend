@@ -16,10 +16,8 @@ import cloudinary from 'cloudinary'
 
 dotenv.config()
 
-console.log(process.env.MONGODB_URI)
-
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI,)
   .then(() => console.log('DB ok'))
   .catch((err) => console.log('DB error', err));
 
@@ -35,12 +33,13 @@ app.use(express.json());
 app.use(cors());
 
 app.post('/auth/login', loginValidation, handleValidationErrors, UserController.login);
+app.post('/auth/login/google', UserController.loginGoogle);
 
 app.post('/auth/register', registerValidation, handleValidationErrors, UserController.register);
 
 app.get('/auth/me', checkAuth, UserController.getMe);
-app.get('/users', checkAuth, UserController.getAll);
-app.delete('/users/:id',  UserController.remove);
+app.get('/users', checkAuth, UserController.getAllUsers);
+app.delete('/users/:id',  UserController.removeUser);
 app.patch('/register/:id', UserController.updateUser);
 
 
@@ -50,19 +49,20 @@ app.patch('/statusUser/:id', UserController.statusUser);
 
 
 app.get('/posts/:id', PostController.getOne);
-
-app.get('/posts/:el/categories', PostController.getAllByCategory);
-
+app.get('/posts/categories/:id', PostController.getAllByCategory);
+app.get('/posts/tags/:tagsId', PostController.getPostsByTags);
+app.get('/posts/:id/showComments',  PostController.showComments);
+app.get('/posts/search/:query',  PostController.searchPost);
+app.post('/posts', checkAuth, postCreateValidation, PostController.createPost);
+app.patch('/posts/:id', checkAuth, postCreateValidation, PostController.updatePost);
+app.patch('/posts/:id/comments', checkAuth, PostController.comments);
+app.delete('/posts/:id', checkAuth, PostController.removePost);
+app.get('/profile/:userId',  PostController.profilePosts);
 app.get('/tags/:cat', PostController.getLastTags);
 app.get('/tags/', PostController.getAllTags);
+app.patch('/rating/:id', checkAuth, PostController.ratingPost);
+app.patch('/likes/:id', checkAuth, PostController.likes);
 
-app.get('/posts/tags/:tagsId', PostController.getPostsByTags);
-
-
-
-
-app.post('/posts', checkAuth, postCreateValidation, PostController.create);
-app.delete('/posts/:id', checkAuth, PostController.remove);
 app.delete('/:public_id', async(req, res) => {
   const {public_id} = req.params;
   try{
@@ -72,14 +72,7 @@ app.delete('/:public_id', async(req, res) => {
     res.status(400).send();
   }
 });
-app.patch('/posts/:id', checkAuth, postCreateValidation, PostController.update);
-app.patch('/posts/:id/comments', checkAuth, PostController.comments);
-app.patch('/rating/:id', checkAuth, PostController.rating);
-app.patch('/likes/:id', checkAuth, PostController.likes);
-app.get('/posts/:id/showComments',  PostController.showComments);
-app.get('/allLikes/:id/get',  PostController.allLikes);
-app.get('/posts/search/:query',  PostController.search);
-app.get('/profile/:userId',  PostController.profile);
+
 
 
 app.listen(process.env.PORT || 4444, (err) => {

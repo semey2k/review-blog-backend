@@ -22,7 +22,7 @@ const PostSchema = new mongoose.Schema({
     required: true,
   },
   userRating: {
-    type: String,
+    type: Number,
     required: true,
   },
   user: {

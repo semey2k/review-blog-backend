@@ -128,29 +128,39 @@ export const getPostsByTags = async (req, res) => {
 
 export const getAllByCategory = async (req, res) => {
   try {
-    const cat = req.params.el;
+    const cat = req.params.id;
+    const postsPerPage = 10;
+    const skip = req.query.skip;
+
+    const total = await PostModel.countDocuments({});
 
     if (cat === 'New') {
       const posts = await PostModel.find()
         .sort({ createdAt: -1 })
+        .skip((skip - 1) * postsPerPage)
+        .limit(postsPerPage)
         .populate({ path: 'user', populate: { path: 'post', model: 'Post', select: ['likes'] } })
         .exec();
-      return res.json(posts);
+      return res.json({ posts, total: Math.ceil(total / postsPerPage) });
     } else if (cat === 'Popular') {
       const posts = await PostModel.find()
-        .sort({ userRating: -1 })
+        .sort({userRating : -1})
+        .skip((skip - 1) * postsPerPage)
+        .limit(postsPerPage)
         .populate({ path: 'user', populate: { path: 'post', model: 'Post', select: ['likes'] } })
         .exec();
-      return res.json(posts);
+      return res.json({ posts, total: Math.ceil(total / postsPerPage) });
     }
 
     const posts = await PostModel.find({
       genres: cat,
     })
       .sort({ createdAt: -1 })
+      .skip((skip - 1) * postsPerPage)
+      .limit(postsPerPage)
       .populate({ path: 'user', populate: { path: 'post', model: 'Post', select: ['likes'] } })
       .exec();
-    res.json(posts);
+    res.json({ posts, total: Math.ceil(total / postsPerPage) });
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -159,7 +169,7 @@ export const getAllByCategory = async (req, res) => {
   }
 };
 
-export const remove = async (req, res) => {
+export const removePost = async (req, res) => {
   try {
     const postId = req.params.id;
 
@@ -193,7 +203,7 @@ export const remove = async (req, res) => {
   }
 };
 
-export const create = async (req, res) => {
+export const createPost = async (req, res) => {
   try {
     const id = req.body.el;
     if (id) {
@@ -226,7 +236,7 @@ export const create = async (req, res) => {
     });
     const post = await doc.save();
 
-    console.log(post._id, req.userId);
+
 
     await UserModel.updateOne({ _id: req.userId }, { $push: { post: post._id } });
 
@@ -239,7 +249,7 @@ export const create = async (req, res) => {
   }
 };
 
-export const update = async (req, res) => {
+export const updatePost = async (req, res) => {
   try {
     const postId = req.params.id;
 
@@ -328,7 +338,7 @@ export const showComments = async (req, res) => {
   }
 };
 
-export const search = async (req, res) => {
+export const searchPost = async (req, res) => {
   try {
     const query = req.params.query;
     const post = await PostModel.find({ $text: { $search: query } })
@@ -344,7 +354,7 @@ export const search = async (req, res) => {
   }
 };
 
-export const rating = async (req, res) => {
+export const ratingPost = async (req, res) => {
   try {
     const postId = req.params.id;
 
@@ -370,7 +380,7 @@ export const rating = async (req, res) => {
   }
 };
 
-export const profile = async (req, res) => {
+export const profilePosts = async (req, res) => {
   try {
     const id = req.params.userId;
 
@@ -404,21 +414,6 @@ export const likes = async (req, res) => {
     res.json({
       success: true,
     });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      message: 'Не удалось обновить статью',
-    });
-  }
-};
-
-export const allLikes = async (req, res) => {
-  try {
-    const id = req.params.id;
-    const posts = await PostModel.find({
-      user: id,
-    }).sort({ createdAt: -1 });
-    res.json(posts);
   } catch (err) {
     console.log(err);
     res.status(500).json({

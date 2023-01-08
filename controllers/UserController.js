@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import jwt_decode from 'jwt-decode';
 
 import UserModel from '../models/User.js';
 
@@ -8,8 +9,6 @@ export const register = async (req, res) => {
     const password = req.body.password;
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
-
-    console.log(req.body.avatarUrl);
 
     const doc = new UserModel({
       email: req.body.email,
@@ -43,11 +42,42 @@ export const register = async (req, res) => {
   }
 };
 
+export const registerGoogle = async (req, res) => {
+  try {
+    const doc = new UserModel({
+      email: req.body.email,
+      fullName: req.body.fullName,
+      avatarUrl: req.body.avatarUrl,
+      post: req.postId,
+      createdAt: new Date().toLocaleString(),
+    });
+
+    const user = await doc.save();
+
+    const token = jwt.sign(
+      {
+        _id: user._id,
+      },
+      'secret123',
+      {
+        expiresIn: '30d',
+      },
+    );
+
+    res.json({ user, token });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: 'Не удалось зарегистрироваться',
+    });
+  }
+};
+
 export const updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    console.log(req.body.fullName);
+
 
     const user = await UserModel.findOneAndUpdate(
       {
@@ -70,11 +100,9 @@ export const updateUser = async (req, res) => {
       },
     );
 
-    const { passwordHash, ...userData } = user._doc;
+    const { passwordHash, ...userData } = user._doc
 
-    console.log(user._doc)
-
-    res.json({ ...userData, token })
+    res.json({ ...userData, token });
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -122,6 +150,53 @@ export const login = async (req, res) => {
   }
 };
 
+export const loginGoogle = async (req, res) => {
+  try {
+    const user = await UserModel.findOne({ email: req.body.email });
+
+    if (!user) {
+      const doc = new UserModel({
+        email: req.body.email,
+        fullName: req.body.fullName,
+        avatarUrl: req.body.avatarUrl,
+        post: req.postId,
+        createdAt: new Date().toLocaleString(),
+      });
+
+      const user = await doc.save();
+
+      const token = jwt.sign(
+        {
+          _id: user._id,
+        },
+        'secret123',
+        {
+          expiresIn: '30d',
+        },
+      );
+
+      return res.json({ user, token });
+    }
+
+    const token = jwt.sign(
+      {
+        _id: user._id,
+      },
+      'secret123',
+      {
+        expiresIn: '30d',
+      },
+    );
+
+    res.json({ user, token });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: 'Не удалось авторизоваться',
+    });
+  }
+};
+
 export const getMe = async (req, res) => {
   try {
     const user = await UserModel.findById(req.userId).populate({
@@ -146,7 +221,7 @@ export const getMe = async (req, res) => {
   }
 };
 
-export const getAll = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
     const users = await UserModel.find();
 
@@ -159,7 +234,7 @@ export const getAll = async (req, res) => {
   }
 };
 
-export const remove = async (req, res) => {
+export const removeUser = async (req, res) => {
   try {
     const userId = req.params.id;
 
